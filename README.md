@@ -1,4 +1,11 @@
 "# tugas_nlp"
+- 1119010 - Nealson William
+- 1119029 - Jennifer Florentina
+- 1119035 - Maria Vabiolla
+- 1119036 - Hans Patrick
+- 1119043 - Tridia Enjeliani
+- 1119045 - Rafael Christo
+
 
 1. main.py : Flask interface run on  http://127.0.0.1:5000/
 2. Sentiment Analysis.ipynb : Jupyter Notebook for Creating Model Classification
