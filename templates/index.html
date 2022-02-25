@@ -74,8 +74,8 @@
     }
     //predict
     function predict(){
-      var value = document.getElementById("canvas").value;
-      if (value != null && value != '') {
+        const value = document.getElementById("canvas").value;
+        if (value != null && value !== '') {
           document.getElementById('predict').style.display = "none";
           document.getElementById('loading').style.display = "inline";
           $.ajax({
