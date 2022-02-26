@@ -4,7 +4,6 @@ import matplotlib
 import joblib
 from nltk.stem.porter import *
 from nltk.tokenize import word_tokenize
-from nltk.corpus import stopwords
 matplotlib.use('Agg')
 
 app = Flask(__name__)
@@ -23,6 +22,7 @@ def predict():
     # load model yang udh di training
     modelRf = joblib.load("./rf.joblib")
     modelSVM = joblib.load("./svm.joblib")
+    modelSVMLinear = joblib.load("./svmLinear.joblib")
     # read image yang udh diambil dari canvas
     preProcessedText = preprocessed(text)
     tfidfconverter = joblib.load("./tfidf-train.joblib")
@@ -30,18 +30,17 @@ def predict():
 
     outRf = modelRf.predict(text_tfidf)[0]
     outSVM = modelSVM.predict(text_tfidf)[0]
+    outSVMLinear = modelSVMLinear.predict(text_tfidf)[0]
     label = ["Negative", "Neutral", "Positive"]
     print(label[outRf-1])
-    return "<h1 id='res'> Random Forest Classifier: " + str(label[outRf-1]) + "</h1>" + "<h1 id='res'> SVM Classifier: " + str(label[outSVM-1]) + "</h1>"
+    return "<h2 id='res'> Random Forest Classifier: " + str(label[outRf-1]) + "</h2>" + "<h2 id='res'> SVM Classifier: " + str(label[outSVM-1]) + "</h2>" + "<h2 id='res'> SVM Linear Classifier: " + str(label[outSVMLinear-1]) + "</h2>"
 
 def stopWordAndStem(inputStr):
-    listStopword = set(stopwords.words('english'))
     lemma = nltk.wordnet.WordNetLemmatizer()
     tokens = word_tokenize(inputStr)
     removed = []
     for i in tokens:
-        if i not in listStopword:
-            removed.append(lemma.lemmatize(i))
+        removed.append(lemma.lemmatize(i))
     return " ".join(removed)
 
 def preprocessed(sentence):
@@ -57,12 +56,6 @@ def preprocessed(sentence):
     s = re.sub(r"http\S+", "", s)
 
     result = s.replace("&amp;", "");
-
-    # Remove all mention
-    result = re.sub("@[A-Za-z0-9_]+", "", result)
-
-    # Remove all hashtag
-    result = re.sub("#[A-Za-z0-9_]+", "", result)
 
     # Remove all emoji
     result = emoji_pattern.sub(r'', result)
