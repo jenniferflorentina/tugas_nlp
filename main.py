@@ -6,6 +6,9 @@ import joblib
 from nltk.stem.porter import *
 from nltk.tokenize import word_tokenize
 from gensim.models import Word2Vec
+import keras
+from keras.preprocessing.text import Tokenizer
+from keras.preprocessing.sequence import pad_sequences
 
 matplotlib.use('Agg')
 
@@ -26,11 +29,14 @@ def predict():
     modelRf = joblib.load("./rf.joblib")
     modelSVM = joblib.load("./svm.joblib")
     modelSVMLinear = joblib.load("./svmLinear.joblib")
+    modelLSTM= keras.models.load_model('./lstm_tfidf.h5')
     modelSVMCBOW = joblib.load("./svmCBOW.joblib")
-    modelSVMSG = joblib.load("./svmSG.joblib")
+    modelLSTMCBOW= keras.models.load_model('./lstm.h5')
 
     # read image yang udh diambil dari canvas
     preProcessedText = preprocessed(text)
+
+    #TFIDF
     tfidfconverter = joblib.load("./tfidf-train.joblib")
     text_tfidf = tfidfconverter.transform([preProcessedText])
 
@@ -38,24 +44,31 @@ def predict():
     outSVM = modelSVM.predict(text_tfidf)[0]
     outSVMLinear = modelSVMLinear.predict(text_tfidf)[0]
 
-    stemPreprocessed = word_tokenize(preProcessedText)
+    #Word2Vec
     cbowConverter = Word2Vec.load("trainCBOW.model")
-    text_cbow = getVectors([stemPreprocessed],cbowConverter)
-    sgConverter = Word2Vec.load("trainSkipGram.model")
-    text_sg = getVectors([stemPreprocessed],sgConverter)
-
+    text_cbow = buildWordVector(preProcessedText, embeddingsSize, cbowConverter)
     outSVMCBOW = modelSVMCBOW.predict(text_cbow)[0]
-    outSVMSG = modelSVMSG.predict(text_sg)[0]
+
+    #LSTM
+    tok = joblib.load("./tokenizer.joblib")
+    encd_rev = tok.texts_to_sequences([preProcessedText])
+    padTextCBOW = pad_sequences(encd_rev, maxlen=24, padding='post')
+    # TFIDF
+    outLSTM = modelLSTM.predict(padTextCBOW)[0].argmax()
+    print(outLSTM)
+    # Word2Vec
+    outLSTMCBOW = modelLSTMCBOW.predict(padTextCBOW)[0].argmax()
+    print(outLSTMCBOW)
 
     label = ["Negative", "Neutral", "Positive"]
-    print(label[outRf-1])
     return "<h2 id='res'> TFIDF </h2>" \
-           "<ul> <li><h3>Random Forest Classifier: " + str(label[outRf-1]) + "</h3></li>" \
-           + "<li><h3> SVM Classifier: " + str(label[outSVM-1]) + "</h3></li>" + \
-           "<li><h3> SVM Linear Classifier: " + str(label[outSVMLinear-1]) + "</h3></li> </ul> <br>" \
-           "<h2 id='res'> Word2Vec </h2>"\
-           "<ul> <li><h3>SVM CBOW Classifier: " + str(label[outSVMCBOW-1]) + "</h3></li>" \
-           "<li><h3> SVM Skip Gram Classifier: " + str(label[outSVMSG-1]) + "</h3></li> <ul>"
+           "<ul> <li><h3>Random Forest Classifier: " + str(label[outRf]) + "</h3></li>" \
+           + "<li><h3> SVM Classifier: " + str(label[outSVM]) + "</h3></li>" + \
+           "<li><h3> SVM Linear Classifier: " + str(label[outSVMLinear]) + "</h3></li>"+\
+           "<li><h3> Bidirectional LSTM: " + str(label[outLSTM]) + "</h3></li> </ul> <br>" \
+           "<h2 id='res'> Word2Vec CBOW </h2>"\
+           "<ul> <li><h3>SVM CBOW Classifier: " + str(label[outSVMCBOW]) + "</h3></li>" \
+           "<li><h3> Bidirectional LSTM: " + str(label[outLSTMCBOW]) + "</h3></li> <ul>"
 
 
 def stopWordAndStem(inputStr):
@@ -101,20 +114,19 @@ def preprocessed(sentence):
 
     return stopWordAndStem(result)
 
-embeddingsSize=256
-def getVectors(dataset, model):
-    singleDataItemEmbedding=np.zeros(embeddingsSize)
-    vectors=[]
-    for dataItem in dataset:
-        wordCount=0
-        for word in dataItem:
-            if word in model.wv.key_to_index.keys():
-                singleDataItemEmbedding=singleDataItemEmbedding+model.wv[word]
-                wordCount=wordCount+1
-        if wordCount > 0:
-            singleDataItemEmbedding= singleDataItemEmbedding/wordCount
-        vectors.append(singleDataItemEmbedding)
-    return vectors
+embeddingsSize=300
+def buildWordVector(text, size, model):
+    vec = np.zeros(size).reshape((1, size))
+    count = 0.
+    for word in text:
+        try:
+            vec += model.wv[word].reshape((1, size))
+            count += 1.
+        except KeyError:
+            continue
+    if count != 0:
+        vec /= count
+    return vec
 
 if __name__ == '__main__':
     app.run(debug=True)
