@@ -91,7 +91,7 @@ def preprocessed(sentence):
 
     s = re.sub(r"http\S+", "", s)
 
-    result = s.replace("&amp;", "");
+    result = s.replace("&amp;", "")
 
     # Remove all emoji
     result = emoji_pattern.sub(r'', result)
